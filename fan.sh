@@ -1,39 +1,31 @@
 #!/usr/bin/env bash
 #
 
-CMD="${0##*/}"
 sysdir="/sys/devices/platform/applesmc.768"
 
-declare -a control_file label_file output_file label
+declare -a control_file output_file label
 
-# Match labels with fan number and get control files
-fan_info() {
-    local fan="$1"
+# retrieve fan info
+declare -i fan=1
+while [[ -f "$sysdir/fan${fan}_label" ]]; do
     control_file[$fan]="$sysdir/fan${fan}_manual"
-    label_file[$fan]="$sysdir/fan${fan}_label"
     output_file[$fan]="$sysdir/fan${fan}_output"
-    read -r label[$fan] < "${label_file[$fan]}"
+    read -r label[$fan] < "$sysdir/fan${fan}_label"
     label[$fan]=${label[$fan],,}                  # lowercase
-}
-
-fan_info 1
-if ! [[ "${label[1]}" =~ ^(exhaust|master)$ ]]; then
-	fan_info 2
-	fan_info 3
-fi
+    ((fan++))
+done
 
 # fan() - set fan
 # $1 is fan number (starting from 1)
 # $2 is percent to apply
 fan_function() {
-    local manual max min
-    local -i fan_100 fan_net fan_final
-    local fan="$1"
-    local percent="$2"                            # "auto" or 0-100
+    declare -i manual max min
+    declare -i fan_100 fan_net fan_final
+    declare -i fan="$1"
+    local percent="$2"                  # "auto" or 0-100
 
     # Getting fan files and data from applesmc.768
     read -r manual < "${control_file[$fan]}"
-
     read -r max < "$sysdir/fan${fan}_max"
     read -r min < "$sysdir/fan${fan}_min"
 
@@ -63,19 +55,18 @@ fan_function() {
 }
 
 usage() {
-    printf "usage: %s [fan] [percent]\n" "$CMD"
-    printf '  fan: "auto", "master", "exhaust", "hdd", "cpu" or "odd"\n'
-    printf '  if fan is not "auto", percent is "auto" or a value between 0 and 100\n'
+    printf "usage: %s [fan] [percent]\n" "${0##*/}"
+    printf '  fan: fan number or "auto"\n'
+    printf '  "auto" or a value between 0 and 100\n'
     exit 1
 }
 
 if (($# == 0)); then
     printf "Available fans:\n"
-    printf "  %s\n" "${label[1]}"
-    if ! [[ "${label[1]}" =~ ^(exhaust|master)$ ]]; then
-        printf "  %s\n" "${label[2]}"
-        printf "  %s\n" "${label[3]}"
-	fi
+    f=1
+    while [[ "${label[$f]}" ]]; do
+        printf "  %d  %s\n" $f "${label[((f++))]}"
+	done
     exit 0
 fi
 
@@ -92,25 +83,15 @@ fi
 case "$command" in
     ### AUTO CONTROL
     auto)
-        echo "0" > "${control_file[1]}"
-        if [[ "${label[1]}" != "exhaust" ]]; then
-		    echo "0" > "${control_file[2]}"
-		    echo "0" > "${control_file[3]}"
-	    fi
-        ;;
-
-    ####  HDD/CPU/ODD CONTROL
-    hdd|cpu|odd)
-        for i in 1 2 3; do
-            if [ "${label[$i]}" = "$command" ]; then
-                fan_function "$i" "$percent"
-            fi
+        fan=1
+        while [[ "${label[$fan]}" ]]; do
+            echo "0" > "${control_file[((fan++))]}"
         done
+        echo "all fans set to auto"
         ;;
 
-    ### EXHAUST/MASTER CONTROL
-    exhaust|master)
-        fan_function 1 "$percent"
+    1|2|3|4|5|6|7|8|9)
+        fan_function "$command" "$percent"
         ;;
 
     *)
