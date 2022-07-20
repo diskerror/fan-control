@@ -55,33 +55,34 @@ fan_function() {
 }
 
 usage() {
-    printf "usage: %s [fan] [percent]\n" "${0##*/}"
+    printf "usage: %s [fan percent|auto]\n" "${0##*/}"
     printf '  fan: fan number or "auto"\n'
-    printf '  "auto" or a value between 0 and 100\n'
-    exit 1
+    printf '  percent: "auto" or a value between 0 and 100\n'
 }
+
+########################################################################################################################
+# MAIN
+
+if [[ ! -d $sysdir ]]; then
+    echo 'Cannot be used on this hardware.'
+    exit 1
+fi
 
 if (($# == 0)); then
     printf "Available fans:\n"
     f=1
     while [[ "${label[$f]}" ]]; do
         printf "  %d  %s\n" $f "${label[((f++))]}"
-	done
+    done
     exit 0
 fi
 
-# fan type and value
-command="$1"
-if [[ "$command" != "auto" ]]; then
-    if (( $# == 2 )); then
-        percent="$2"
-    else
+case "$1" in
+    '')
         usage
-    fi
-fi
+        exit 0
+        ;;
 
-case "$command" in
-    ### AUTO CONTROL
     auto)
         fan=1
         while [[ "${label[$fan]}" ]]; do
@@ -90,11 +91,13 @@ case "$command" in
         echo "all fans set to auto"
         ;;
 
-    1|2|3|4|5|6|7|8|9)
-        fan_function "$command" "$percent"
+    1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+        fan_function "$1" "$2"
         ;;
 
     *)
-        printf 'unknown command %s\n' "$command"
+        printf 'unknown command %s\n' "$1"
         usage
+        exit 1
+        ;;
 esac
