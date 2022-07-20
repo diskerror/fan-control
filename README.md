@@ -1,65 +1,15 @@
-# Linux on mac fan control
-Note: This script has been  primary coded for my iMac 12,1 (2011, 21.5 inch) and was later updated to work as well on the following macs: MacBook 5,1 and 5,2 running Ubuntu 20.04 and Macmini 3,1 (2009 Macmini), if you have problems with this script on other Macs please open an issue
+# Linux on Mac fan control
+I am grateful for the work done on the original project. 
 
-Usage:
-## Option A 
-(here you don't create the actual command, just an alias, but it's more updatable, just `git pull` will get the job done)
+Note from the original author: "This script has been  primary coded for my iMac 12,1 (2011, 21.5 inch) and was later updated to work as well on the following macs: MacBook 5,1 and 5,2 running Ubuntu 20.04 and Macmini 3,1 (2009 Macmini)."
 
+Additional testing on a classic Mac Pro 4,1 flashed to 5,1 and dual processors running Debian 11.
 
-1. Clone the repo in home 
-```
-cd ~/ && git clone https://github.com/juampapo546/fan-control/
-
-2. Create the alias for this script <br>
-   If you use bash :
-
-```
-echo  'alias fan="sudo sh /home/$USER/fan-control/fan.sh"' >> ~/.bashrc
- ```
-If you use zsh :
- ```
- sudo echo  'alias fan="sudo sh /home/$USER/fan-control/fan.sh"' >> ~/.zshrc
- ```
-If you have doubts you probably use bash, to be sure check if you have in your /home .bashrc or .zshrc 
-___
-
-## Option B
-(here you create the command but you'll have to repeat the whole process every time you want to update)
-
-1. Clone the repo in home <br>
-```
-cd ~/ && git clone https://github.com/juampapo546/fan-control/
-```
-
-2. Move the script to /bin and make it executable <br>
-``` 
-sudo mv ~/fan-control/fan.sh /bin/fan && sudo chmod +x /bin/fan 
-```
-
-3. (optional) Clean remainings of the repo <br>
-```
-rm -rf ~/fan-control 
-```
-
-____
-
-### Run fan!
-
-First check what fans are available for your mac
-
-```
-fan
-```
-Then choose one one of the output fans and run:
-
-``` 
-sudo fan [ SELECT FAN TO CONTROL ] [SELECT THE PERCENTAGE YOU WANT THE FAN TO RUN ] 
-
-	-hdd (an example)		-value (nummber from 1 to 100)  
-	-auto				-auto 	 
-```
-For example if you want cpu fan to run at it's 65% the input should be: <br>
-
-```
-sudo fan cpu 65
-```
+## Goals of this branch:
+- Standard command line behavior
+- Add verbs "get" and "set"
+- Allow percentage as well as actual RPM values
+- Live updating option, like 'top'
+- Output formatting options
+- Add temperature sensor readings
+- Saving and restoring of settings
