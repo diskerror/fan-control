@@ -7,8 +7,8 @@ Additional testing on a classic Mac Pro 4,1 flashed to 5,1 and dual processors r
 
 ## Goals of this branch:
 - ~~Get all fans~~
-- Standard command line behavior
-- Add verbs "get" and "set"
+- ~~Standard command line behavior~~
+- ~~Add verbs "get" and "set"~~
 - Allow percentage as well as actual RPM values
 - Live updating option, like 'top'
 - Output formatting options

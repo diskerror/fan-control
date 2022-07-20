@@ -1,34 +1,37 @@
 #!/usr/bin/env bash
-#
 
-sysdir="/sys/devices/platform/applesmc.768"
+declare -r SYSDIR="/sys/devices/platform/applesmc.768"
 
-declare -A fan_info
-declare -i fan f
+declare -Ax fan_info
+declare -i f
+
+function fan_exists() {
+    declare -i fan=$1
+    if [[ ! -f "$SYSDIR/fan${fan}_label" ]]; then
+        echo -n 1
+        return
+    fi
+    echo -n
+}
 
 function get_fan_info() {
     declare -i fan=$1
-    if [[ ! -f "$sysdir/fan${fan}_label" ]]; then
-        echo 1
-        return
-    fi
 
-    fan_info['manual_file']="$sysdir/fan${fan}_manual"
-    fan_info['output_file']="$sysdir/fan${fan}_output"
-    read -r fan_info['label'] < "$sysdir/fan${fan}_label"
+    fan_info['manual_file']="$SYSDIR/fan${fan}_manual"
+    fan_info['output_file']="$SYSDIR/fan${fan}_output"
+    read -r fan_info['label'] < "$SYSDIR/fan${fan}_label"
     fan_info['label']=${fan_info['label'],,}                # lower case
     read -r fan_info['manual'] < ${fan_info['manual_file']}
-    read -r fan_info['min'] < "$sysdir/fan${fan}_min"
+    read -r fan_info['min'] < "$SYSDIR/fan${fan}_min"
     read -r fan_info['output'] < ${fan_info['output_file']} # target speed
-    read -r fan_info['max'] < "$sysdir/fan${fan}_max"
-    read -r fan_info['input'] < "$sysdir/fan${fan}_input"   # actual speed
-    echo -n
+    read -r fan_info['max'] < "$SYSDIR/fan${fan}_max"
+    read -r fan_info['input'] < "$SYSDIR/fan${fan}_input"   # actual speed
 }
 
 # fan() - set fan
 # $1 is fan number (starting from 1)
 # $2 is percent to apply
-function fan_function() {
+function set_fan_speed() {
     declare -i fan_100 fan_net fan_final
     local percent="$2"                  # "auto" or 0-100
 
@@ -37,7 +40,7 @@ function fan_function() {
     if [ "$percent" = "auto" ]; then
         # Switch back fan1 to auto mode
         echo "0" > ${fan_info['manual_file']}
-        printf "fan mode set to auto"
+        printf "fan %d mode set to auto\n" $1
     else
         #Putting fan on manual mode
         if [ ${fan_info['manual']} = "0" ]; then
@@ -46,13 +49,14 @@ function fan_function() {
 
         # Calculating the net value that will be given to the fans
         fan_100=$((fan_info['max'] - fan_info['min']))
+
         # Calculating final percentage value
         fan_net=$((percent * fan_100 / 100))
         fan_final=$((fan_net + fan_info['min']))
 
         # Writing the final value to the applemc files
         if echo "$fan_final" > ${fan_info['output_file']}; then
-            printf "fan set to %d rpm.\n" "$fan_final"
+            printf "fan %d set to %d rpm.\n" $1 "$fan_final"
         else
             printf "Try running command as sudo\n"
         fi
@@ -60,34 +64,18 @@ function fan_function() {
 }
 
 function usage() {
-    printf "usage: %s [fan percent|auto]\n" "${0##*/}"
-    printf '  fan: fan number or "auto"\n'
+    printf "usage: %s (get [fan]|set fan percent]\n" "${0##*/}"
+    printf '  command: get or set\n'
+    printf '  fan: fan number or "all"\n'
     printf '  percent: "auto" or a value between 0 and 100\n'
 }
 
 ########################################################################################################################
 # MAIN
 
-if [[ ! -d $sysdir ]]; then
+if [[ ! -d $SYSDIR ]]; then
     echo 'Cannot be used on this hardware.'
     exit 1
-fi
-
-if (($# == 0)); then
-    printf "Available fans:\n"
-    printf "  %s  % -10s % 4s % 4s % 4s  % 7s\n" '#' 'name' 'min' 'set' 'max' 'current'
-    f=1
-    while [[ $(get_fan_info $f) -eq 0 ]]; do
-        get_fan_info $f
-        if [[ ${fan_info['manual']} == 0 ]]; then
-            target_speed="auto"
-        else
-            target_speed=${fan_info['output']}
-        fi
-        printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info['label']} ${fan_info['min']} $target_speed ${fan_info['max']} ${fan_info['input']}
-        ((f++))
-    done
-    exit 0
 fi
 
 case "$1" in
@@ -96,18 +84,56 @@ case "$1" in
         exit 0
         ;;
 
-    auto)
-        fan=1
-        while [[ $(get_fan_info $fan) -eq 0  ]]; do
-            get_fan_info $fan
-            echo "0" > "${fan_info['manual_file']}"
-            ((fan++))
-        done
-        echo "all fans set to auto"
+    'get')
+        case "$2" in
+            'all' | '')
+                printf "Available fans:\n"
+                printf "  %s  % -10s % 4s % 4s % 4s  % 7s\n" '#' 'label' 'min' 'set' 'max' 'current'
+                f=1
+                while [[ $(fan_exists $f) -eq 0 ]]; do
+                    get_fan_info $f
+                    if [[ ${fan_info['manual']} == 0 ]]; then
+                        target_speed="auto"
+                    else
+                        target_speed=${fan_info['output']}
+                    fi
+                    printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info['label']} ${fan_info['min']} $target_speed ${fan_info['max']} ${fan_info['input']}
+                    ((f++))
+                done
+                ;;
+
+            1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+                echo "not implemented yet"
+                ;;
+
+            *)
+                printf 'unknown fan choice %s\n' "$2"
+                usage
+                exit 1
+                ;;
+        esac
         ;;
 
-    1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
-        fan_function "$1" "$2"
+    'set')
+        case "$2" in
+            'all')
+                f=1
+                while [[ $(fan_exists $f) -eq 0 ]]; do
+                    set_fan_speed "$f" "$3"
+                    ((f++))
+                done
+                ;;
+
+            1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+                set_fan_speed "$2" "$3"
+                ;;
+
+            *)
+                printf 'unknown fan choice %s\n' "$2"
+                usage
+                exit 1
+                ;;
+        esac
         ;;
 
     *)
@@ -116,3 +142,5 @@ case "$1" in
         exit 1
         ;;
 esac
+
+exit 0
