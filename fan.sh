@@ -15,7 +15,7 @@ function fan_exists() {
 }
 
 function get_fan_info() {
-    declare -i fan=$1
+    declare -ir fan=$1
 
     fan_info['manual_file']="$SYSDIR/fan${fan}_manual"
     fan_info['output_file']="$SYSDIR/fan${fan}_output"
@@ -33,18 +33,18 @@ function get_fan_info() {
 # $2 is speed to apply
 function set_fan_speed() {
     declare -i fan_100 fan_net fan_final
-    local speed="$2"                  # "auto" or 0-100
+    declare -r speed="$2"                  # "auto", 0-100, or min-max
 
     get_fan_info $1
 
     if [ "$speed" = "auto" ]; then
         # Switch back fan1 to auto mode
-        echo "0" > ${fan_info['manual_file']}
+        echo "0" > "${fan_info['manual_file']}"
         printf "fan %d mode set to auto\n" $1
     else
         #Putting fan on manual mode
         if [ ${fan_info['manual']} = "0" ]; then
-            echo "1" > $fan_info['manual_file']
+            echo "1" > "${fan_info['manual_file']}"
         fi
 
         if [ "$speed" -le 100 ]; then
@@ -55,15 +55,15 @@ function set_fan_speed() {
             fan_net=$((speed * fan_100 / 100))
             fan_final=$((fan_net + fan_info['min']))
         elif [ "$speed" -lt ${fan_info['min']} ]; then
-            fan_final=$fan_info['min']
+            fan_final=${fan_info['min']}
         elif [ "$speed" -gt ${fan_info['max']} ]; then
-            fan_final=$fan_info['max']
+            fan_final=${fan_info['max']}
         else
             fan_final=$speed
         fi
 
         # Writing the final value to the applemc files
-        echo "$fan_final" > ${fan_info['output_file']}
+        echo "$fan_final" > "${fan_info['output_file']}"
     fi
 }
 
