@@ -63,11 +63,7 @@ function set_fan_speed() {
         fi
 
         # Writing the final value to the applemc files
-        if echo "$fan_final" > ${fan_info['output_file']}; then
-            printf "fan %d set to %d rpm.\n" $1 "$fan_final"
-        else
-            printf "Try running command as sudo\n"
-        fi
+        echo "$fan_final" > ${fan_info['output_file']}
     fi
 }
 
@@ -123,6 +119,11 @@ case "$1" in
         ;;
 
     'set')
+        if [[ "root" != $(whoami) ]]; then
+	        echo "must be root"
+	        exit 1
+        fi
+
         case "$2" in
             'all')
                 f=1
