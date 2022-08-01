@@ -30,29 +30,37 @@ function get_fan_info() {
 
 # fan() - set fan
 # $1 is fan number (starting from 1)
-# $2 is percent to apply
+# $2 is speed to apply
 function set_fan_speed() {
     declare -i fan_100 fan_net fan_final
-    local percent="$2"                  # "auto" or 0-100
+    local speed="$2"                  # "auto" or 0-100
 
     get_fan_info $1
 
-    if [ "$percent" = "auto" ]; then
+    if [ "$speed" = "auto" ]; then
         # Switch back fan1 to auto mode
         echo "0" > ${fan_info['manual_file']}
         printf "fan %d mode set to auto\n" $1
     else
         #Putting fan on manual mode
         if [ ${fan_info['manual']} = "0" ]; then
-            echo "1" > ${fan_info['manual_file']}
+            echo "1" > $fan_info['manual_file']
         fi
 
-        # Calculating the net value that will be given to the fans
-        fan_100=$((fan_info['max'] - fan_info['min']))
+        if [ "$speed" -le 100 ]; then
+            # Calculating the net value that will be given to the fans
+            fan_100=$((fan_info['max'] - fan_info['min']))
 
-        # Calculating final percentage value
-        fan_net=$((percent * fan_100 / 100))
-        fan_final=$((fan_net + fan_info['min']))
+            # Calculating final speedage value
+            fan_net=$((speed * fan_100 / 100))
+            fan_final=$((fan_net + fan_info['min']))
+        elif [ "$speed" -lt ${fan_info['min']} ]; then
+            fan_final=$fan_info['min']
+        elif [ "$speed" -gt ${fan_info['max']} ]; then
+            fan_final=$fan_info['max']
+        else
+            fan_final=$speed
+        fi
 
         # Writing the final value to the applemc files
         if echo "$fan_final" > ${fan_info['output_file']}; then
@@ -64,10 +72,10 @@ function set_fan_speed() {
 }
 
 function usage() {
-    printf "usage: %s (get [fan]|set fan percent]\n" "${0##*/}"
+    printf "usage: %s get [<fan>]|set <fan> <speed>]\n" "${0##*/}"
     printf '  command: get or set\n'
     printf '  fan: fan number or "all"\n'
-    printf '  percent: "auto" or a value between 0 and 100\n'
+    printf '  speed: "auto", a percentage between min and max, or absolute value\n'
 }
 
 ########################################################################################################################
