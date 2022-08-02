@@ -2,7 +2,7 @@
 
 declare -r SYSDIR="/sys/devices/platform/applesmc.768"
 
-declare -Ax fan_info
+declare -A fan_info
 declare -i f
 
 function fan_exists() {
@@ -17,15 +17,15 @@ function fan_exists() {
 function get_fan_info() {
     declare -ir fan=$1
 
-    fan_info['manual_file']="$SYSDIR/fan${fan}_manual"
-    fan_info['output_file']="$SYSDIR/fan${fan}_output"
-    read -r fan_info['label'] < "$SYSDIR/fan${fan}_label"
-    fan_info['label']=${fan_info['label'],,}                # lower case
-    read -r fan_info['manual'] < ${fan_info['manual_file']}
-    read -r fan_info['min'] < "$SYSDIR/fan${fan}_min"
-    read -r fan_info['output'] < ${fan_info['output_file']} # target speed
-    read -r fan_info['max'] < "$SYSDIR/fan${fan}_max"
-    read -r fan_info['input'] < "$SYSDIR/fan${fan}_input"   # actual speed
+    fan_info[manual_file]="$SYSDIR/fan${fan}_manual"
+    fan_info[output_file]="$SYSDIR/fan${fan}_output"
+    read -r fan_info[label] < "$SYSDIR/fan${fan}_label"
+    fan_info[label]=${fan_info[label],,}                # lower case
+    read -r fan_info[manual] < ${fan_info[manual_file]}
+    read -r fan_info[min] < "$SYSDIR/fan${fan}_min"
+    read -r fan_info[output] < ${fan_info[output_file]} # target speed
+    read -r fan_info[max] < "$SYSDIR/fan${fan}_max"
+    read -r fan_info[input] < "$SYSDIR/fan${fan}_input"   # actual speed
 }
 
 # fan() - set fan
@@ -39,31 +39,32 @@ function set_fan_speed() {
 
     if [ "$speed" = "auto" ]; then
         # Switch back fan1 to auto mode
-        echo "0" > "${fan_info['manual_file']}"
+        echo "0" > "${fan_info[manual_file]}"
         printf "fan %d mode set to auto\n" $1
     else
         #Putting fan on manual mode
-        if [ ${fan_info['manual']} = "0" ]; then
-            echo "1" > "${fan_info['manual_file']}"
+        if [ ${fan_info[manual]} = "0" ]; then
+            echo "1" > "${fan_info[manual_file]}"
         fi
 
         if [ "$speed" -le 100 ]; then
             # Calculating the net value that will be given to the fans
-            fan_100=$((fan_info['max'] - fan_info['min']))
+            fan_100=$((fan_info[max] - fan_info[min]))
 
             # Calculating final speedage value
             fan_net=$((speed * fan_100 / 100))
-            fan_final=$((fan_net + fan_info['min']))
-        elif [ "$speed" -lt ${fan_info['min']} ]; then
-            fan_final=${fan_info['min']}
-        elif [ "$speed" -gt ${fan_info['max']} ]; then
-            fan_final=${fan_info['max']}
+            fan_final=$((fan_net + fan_info[min]))
+        elif [ "$speed" -lt ${fan_info[min]} ]; then
+            fan_final=${fan_info[min]}
+        elif [ "$speed" -gt ${fan_info[max]} ]; then
+            fan_final=${fan_info[max]}
         else
             fan_final=$speed
         fi
 
         # Writing the final value to the applemc files
-        echo "$fan_final" > "${fan_info['output_file']}"
+        echo "$fan_final" > "${fan_info[output_file]}"
+        echo "Fan \"${fan_info[label]}\" set to ${fan_final} RPM."
     fi
 }
 
@@ -96,18 +97,27 @@ case "$1" in
                 f=1
                 while [[ $(fan_exists $f) -eq 0 ]]; do
                     get_fan_info $f
-                    if [[ ${fan_info['manual']} == 0 ]]; then
+                    if [[ ${fan_info[manual]} == 0 ]]; then
                         target_speed="auto"
                     else
-                        target_speed=${fan_info['output']}
+                        target_speed=${fan_info[output]}
                     fi
-                    printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info['label']} ${fan_info['min']} $target_speed ${fan_info['max']} ${fan_info['input']}
+                    printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info[label]} ${fan_info[min]} $target_speed ${fan_info[max]} ${fan_info[input]}
                     ((f++))
                 done
                 ;;
 
             1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
-                echo "not implemented yet"
+                printf "  %s  % -10s % 4s % 4s % 4s  % 7s\n" '#' 'label' 'min' 'set' 'max' 'current'
+                if [[ $(fan_exists $f) -eq 0 ]]; then
+                    get_fan_info $f
+                    if [[ ${fan_info[manual]} == 0 ]]; then
+                        target_speed="auto"
+                    else
+                        target_speed=${fan_info[output]}
+                    fi
+                    printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info[label]} ${fan_info[min]} $target_speed ${fan_info[max]} ${fan_info[input]}
+                fi
                 ;;
 
             *)
