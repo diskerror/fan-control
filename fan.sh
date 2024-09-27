@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Reid Woodbury Jr 2020
+# Forked from https://github.com/JuampiCarosi/fan-control/fan.sh
+
 declare -r SYSDIR="/sys/devices/platform/applesmc.768"
 
 declare -A fan_info
@@ -10,7 +13,7 @@ function fan_exists() {
     if [[ ! -f "$SYSDIR/fan${fan}_label" ]]; then
         echo -n 1
         return
-    fi
+  fi
     echo -n
 }
 
@@ -41,11 +44,11 @@ function set_fan_speed() {
         # Switch back fan1 to auto mode
         echo "0" > "${fan_info[manual_file]}"
         printf "fan %d mode set to auto\n" $1
-    else
+  else
         #Putting fan on manual mode
         if [ ${fan_info[manual]} = "0" ]; then
             echo "1" > "${fan_info[manual_file]}"
-        fi
+    fi
 
         if [ "$speed" -le 100 ]; then
             # Calculating the net value that will be given to the fans
@@ -54,18 +57,18 @@ function set_fan_speed() {
             # Calculating final speedage value
             fan_net=$((speed * fan_100 / 100))
             fan_final=$((fan_net + fan_info[min]))
-        elif [ "$speed" -lt ${fan_info[min]} ]; then
+    elif     [ "$speed" -lt ${fan_info[min]} ]; then
             fan_final=${fan_info[min]}
-        elif [ "$speed" -gt ${fan_info[max]} ]; then
+    elif     [ "$speed" -gt ${fan_info[max]} ]; then
             fan_final=${fan_info[max]}
-        else
+    else
             fan_final=$speed
-        fi
+    fi
 
         # Writing the final value to the applemc files
         echo "$fan_final" > "${fan_info[output_file]}"
         echo "Fan \"${fan_info[label]}\" set to ${fan_final} RPM."
-    fi
+  fi
 }
 
 function usage() {
@@ -99,12 +102,12 @@ case "$1" in
                     get_fan_info $f
                     if [[ ${fan_info[manual]} == 0 ]]; then
                         target_speed="auto"
-                    else
+          else
                         target_speed=${fan_info[output]}
-                    fi
+          fi
                     printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info[label]} ${fan_info[min]} $target_speed ${fan_info[max]} ${fan_info[input]}
                     ((f++))
-                done
+        done
                 ;;
 
             1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
@@ -113,11 +116,11 @@ case "$1" in
                     get_fan_info $f
                     if [[ ${fan_info[manual]} == 0 ]]; then
                         target_speed="auto"
-                    else
+          else
                         target_speed=${fan_info[output]}
-                    fi
+          fi
                     printf "  %d  % -10s % 4s % 4s % 4s  % 7s\n" $f ${fan_info[label]} ${fan_info[min]} $target_speed ${fan_info[max]} ${fan_info[input]}
-                fi
+        fi
                 ;;
 
             *)
@@ -125,14 +128,14 @@ case "$1" in
                 usage
                 exit 1
                 ;;
-        esac
+    esac
         ;;
 
     'set')
         if [[ "root" != $(whoami) ]]; then
-	        echo "must be root"
-	        exit 1
-        fi
+         echo "must be root"
+         exit 1
+    fi
 
         case "$2" in
             'all')
@@ -140,7 +143,7 @@ case "$1" in
                 while [[ $(fan_exists $f) -eq 0 ]]; do
                     set_fan_speed "$f" "$3"
                     ((f++))
-                done
+        done
                 ;;
 
             1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
@@ -152,7 +155,7 @@ case "$1" in
                 usage
                 exit 1
                 ;;
-        esac
+    esac
         ;;
 
     *)
